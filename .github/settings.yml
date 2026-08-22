@@ -1,0 +1,13 @@
+# Repository settings for QuadriviumPress/college-physics-bundle.
+# Safe to sync with the GitHub Settings app if enabled; no org-specific teams.
+
+repository:
+  private: false
+
+  has_issues: true
+  has_wiki: false
+  has_projects: false
+  has_downloads: false
+
+  allow_auto_merge: true
+  delete_branch_on_merge: true

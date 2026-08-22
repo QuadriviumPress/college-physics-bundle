@@ -1,0 +1,8 @@
+.xsd
+*.vsix
+# Eleventy site build
+node_modules/
+_site/
+search_index.json
+assets/js/mathjax/
+assets/js/vendor/

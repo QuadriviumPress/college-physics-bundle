@@ -1,0 +1,19 @@
+<hr />
+<footer>
+  Content by <a href="https://openstax.org/subjects/science" target="_blank" rel="noopener">OpenStax</a>
+  (<em>University Physics</em>, Volumes 1&ndash;3), licensed under
+  <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="license" target="_blank"
+    >Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International</a
+  >. OpenStax is not affiliated with this site.
+</footer>
+
+<script>
+  // Offline support (sw.njk). Book.baseHref carries the deployment's path
+  // prefix without a trailing slash, so this resolves for both GitHub Pages
+  // and root hosting.
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register(window.Book.baseHref + '/sw.js');
+    });
+  }
+</script>

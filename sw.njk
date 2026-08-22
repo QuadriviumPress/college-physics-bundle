@@ -1,0 +1,164 @@
+---js
+{
+  permalink: 'sw.js',
+  eleventyExcludeFromCollections: true,
+}
+---
+// Service worker — offline support for the University Physics site.
+// Emitted by sw.njk so URLs carry the deployment's path prefix and the cache
+// version tracks the build (see _data/build.js).
+//
+// Strategy:
+//  - install: precache the app shell (viewer CSS/JS, MathJax core, TOC)
+//  - navigations / HTML (incl. the viewer's SPA page fetches): network-first,
+//    falling back to cache when offline
+//  - media/, cover/, MathJax fonts: cache-first (content-stable files)
+//  - everything else same-scope: stale-while-revalidate
+
+const VERSION = '{{ build.time }}';
+const PREFIX = '{{ "/" | url | trimSlash }}'; // '' when root-hosted (Vercel)
+const PRECACHE = `precache-${VERSION}`;
+// Versioned with the build so activate can drop the previous runtime cache
+// (visited HTML/media would otherwise accumulate unboundedly in runtime-v1).
+const RUNTIME = `runtime-${VERSION}`;
+
+// Without these the site cannot render offline at all, so a failure here is
+// worth failing the install for (the browser retries on the next navigation).
+const CRITICAL_URLS = [
+  `${PREFIX}/`,
+  `${PREFIX}/SUMMARY.html`,
+  `${PREFIX}/offline.html`,
+  `${PREFIX}/assets/css/theme.css`,
+  `${PREFIX}/assets/css/book.css`,
+  `${PREFIX}/assets/js/book-config.js`,
+  `${PREFIX}/assets/js/icons.js`,
+  `${PREFIX}/assets/js/book-viewer.js`,
+];
+
+// Nice to have offline, but each is individually recoverable: math falls back
+// to unrendered MathML, search to "still loading", and the runtime handlers
+// cache all of them on first use anyway. Fetched one by one so a single 404 or
+// flaky response cannot reject the whole install and leave the reader with no
+// service worker at all (cache.addAll is atomic).
+const OPTIONAL_URLS = [
+  `${PREFIX}/manifest.webmanifest`,
+  `${PREFIX}/assets/css/print.css`,
+  `${PREFIX}/assets/js/math-config.js`,
+  `${PREFIX}/assets/js/search.js`,
+  `${PREFIX}/assets/js/search-ui.js`,
+  `${PREFIX}/assets/js/vendor/minisearch.js`,
+  `${PREFIX}/assets/js/mathjax/mml-chtml.js`,
+  `${PREFIX}/assets/js/mathjax/fonts/mathjax-newcm-font/chtml.js`,
+];
+
+// search_index.json is deliberately absent: it is ~2 MB and only needed once
+// the reader actually searches, at which point search.js fetches it and the
+// stale-while-revalidate handler caches it.
+
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches
+      .open(PRECACHE)
+      .then(async cache => {
+        await cache.addAll(CRITICAL_URLS);
+        await Promise.all(
+          OPTIONAL_URLS.map(url => cache.add(url).catch(() => undefined))
+        );
+      })
+      .then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then(keys =>
+        Promise.all(
+          keys
+            .filter(
+              key =>
+                (key.startsWith('precache-') && key !== PRECACHE) ||
+                (key.startsWith('runtime-') && key !== RUNTIME) ||
+                // Legacy unversioned runtime from earlier builds
+                key === 'runtime-v1'
+            )
+            .map(key => caches.delete(key))
+        )
+      )
+      .then(() => self.clients.claim())
+  );
+});
+
+const isHtml = (request, url) =>
+  request.mode === 'navigate' || url.pathname.endsWith('/') || url.pathname.endsWith('.html');
+
+// Files whose contents never change for a given URL (OpenStax figures, volume
+// covers, MathJax woff2/dynamic-range files).
+const isImmutable = url =>
+  url.pathname.startsWith(`${PREFIX}/media/`) ||
+  url.pathname.startsWith(`${PREFIX}/cover/`) ||
+  url.pathname.startsWith(`${PREFIX}/assets/js/mathjax/fonts/`);
+
+async function networkFirst(request) {
+  const cache = await caches.open(RUNTIME);
+  try {
+    const response = await fetch(request);
+    if (response.ok) await cache.put(request, response.clone());
+    return response;
+  } catch {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    // Navigations to a never-visited page get the precached offline page
+    // instead of a browser error.
+    if (request.mode === 'navigate') {
+      const offline = await caches.match(`${PREFIX}/offline.html`);
+      if (offline) return offline;
+    }
+    throw new Error(`offline and not cached: ${request.url}`);
+  }
+}
+
+async function cacheFirst(request) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+  const response = await fetch(request);
+  if (response.ok) {
+    const cache = await caches.open(RUNTIME);
+    await cache.put(request, response.clone());
+  }
+  return response;
+}
+
+async function staleWhileRevalidate(event, request) {
+  const cached = await caches.match(request);
+  const refresh = fetch(request)
+    .then(async response => {
+      if (response.ok) {
+        const cache = await caches.open(RUNTIME);
+        await cache.put(request, response.clone());
+      }
+      return response;
+    })
+    .catch(() => cached);
+  // Keep the worker alive until the background refresh has been written,
+  // otherwise the cache never updates and stale assets are served forever.
+  event.waitUntil(refresh.then(() => undefined).catch(() => undefined));
+  return cached || refresh;
+}
+
+self.addEventListener('fetch', event => {
+  const { request } = event;
+  if (request.method !== 'GET') return;
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+  if (!url.pathname.startsWith(`${PREFIX}/`)) return;
+
+  if (isHtml(request, url)) {
+    event.respondWith(networkFirst(request));
+  } else if (isImmutable(url)) {
+    event.respondWith(cacheFirst(request));
+  } else {
+    event.respondWith(staleWhileRevalidate(event, request));
+  }
+});

@@ -1,0 +1,57 @@
+---
+permalink: /SUMMARY.html
+layout: page
+title: College Physics
+eleventyExcludeFromCollections: true
+---
+
+{# The book-viewer fetches this page, takes the first <ul>, and uses its first
+   nested <ul> as the sidebar TOC (li children become the sidebar entries).
+   Chapter/section numbers are added by CSS counters (li.chapter / li.chapter > ol).
+   Units with an empty title (flat CollXML books) emit chapters directly. #}
+<ul>
+  <li>{{ site.title }}
+    <ul class="toc-root">
+      {% for vol in book.volumes %}
+        <li class="volume">
+          <a href="{{ vol.url }}">{{ vol.title }}</a>
+          <ul>
+            {% for p in vol.front %}
+              <li class="preface"><a href="{{ p.url }}">{{ p.sidebarTitle }}</a></li>
+            {% endfor %}
+            {% for unit in vol.units %}
+              {% if unit.title %}
+              <li class="unit"><span class="unit-label">{{ unit.title }}</span>
+                <ol class="chapters">
+                  {% for ch in unit.chapters %}
+                    <li class="chapter"><p><a href="{{ ch.url }}">{{ ch.title }}</a></p>
+                      <ol>
+                        {% for s in ch.sections %}
+                          <li class="section"><a href="{{ s.url }}">{{ s.sidebarTitle }}</a></li>
+                        {% endfor %}
+                      </ol>
+                    </li>
+                  {% endfor %}
+                </ol>
+              </li>
+              {% else %}
+                {% for ch in unit.chapters %}
+                  <li class="chapter"><p><a href="{{ ch.url }}">{{ ch.title }}</a></p>
+                    <ol>
+                      {% for s in ch.sections %}
+                        <li class="section"><a href="{{ s.url }}">{{ s.sidebarTitle }}</a></li>
+                      {% endfor %}
+                    </ol>
+                  </li>
+                {% endfor %}
+              {% endif %}
+            {% endfor %}
+            {% for p in vol.back %}
+              <li class="appendix"><a href="{{ p.url }}">{{ p.sidebarTitle }}</a></li>
+            {% endfor %}
+          </ul>
+        </li>
+      {% endfor %}
+    </ul>
+  </li>
+</ul>

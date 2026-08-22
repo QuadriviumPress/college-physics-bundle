@@ -1,0 +1,54 @@
+---js
+{
+  pagination: {
+    data: "book.volumes",
+    size: 1,
+    alias: "vol",
+  },
+  permalink: "{{ vol.permalink }}",
+  layout: "page",
+  eleventyExcludeFromCollections: true,
+  eleventyComputed: {
+    title: data => data.vol.title,
+  },
+}
+---
+<div class="volume-toc">
+  <img class="volume-cover" src="{{ vol.cover }}" alt="Cover of {{ vol.title }}" loading="lazy" />
+
+  <ul class="volume-contents">
+    {% for p in vol.front %}
+      <li class="toc-front"><a href="{{ p.url }}">{{ p.displayTitle }}</a></li>
+    {% endfor %}
+    {% for unit in vol.units %}
+      {% if unit.title %}
+      <li class="toc-unit"><span class="toc-unit-label">{{ unit.title }}</span>
+        <ul>
+          {% for ch in unit.chapters %}
+            <li class="toc-chapter"><a href="{{ ch.url }}">{{ ch.number }}. {{ ch.title }}</a>
+              <ul>
+                {% for s in ch.sections %}
+                  <li><a href="{{ s.url }}">{{ s.displayTitle }}</a></li>
+                {% endfor %}
+              </ul>
+            </li>
+          {% endfor %}
+        </ul>
+      </li>
+      {% else %}
+        {% for ch in unit.chapters %}
+          <li class="toc-chapter"><a href="{{ ch.url }}">{{ ch.number }}. {{ ch.title }}</a>
+            <ul>
+              {% for s in ch.sections %}
+                <li><a href="{{ s.url }}">{{ s.displayTitle }}</a></li>
+              {% endfor %}
+            </ul>
+          </li>
+        {% endfor %}
+      {% endif %}
+    {% endfor %}
+    {% for p in vol.back %}
+      <li class="toc-back"><a href="{{ p.url }}">{{ p.displayTitle }}</a></li>
+    {% endfor %}
+  </ul>
+</div>

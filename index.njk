@@ -1,0 +1,18 @@
+---
+title: Home
+layout: default
+---
+
+<div class="landing">
+  <h1 class="page-title">{{ site.title }}</h1>
+  <p>{{ site.description }}</p>
+
+  <div class="volume-cards">
+    {% for vol in book.volumes %}
+      <a class="volume-card" href="{{ vol.url }}">
+        <img src="/cover/{{ vol.slug }}-cover.jpg" alt="Cover of {{ vol.title }}" loading="lazy" />
+        <span class="volume-card-title">{{ vol.title }}</span>
+      </a>
+    {% endfor %}
+  </div>
+</div>

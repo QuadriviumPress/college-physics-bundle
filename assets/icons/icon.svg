@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Source for icon-192.png / icon-512.png (rasterized via a headless
+       browser canvas; see BUILDING.md). Full-bleed background with the mark
+       inside the centre ~75% keeps it maskable-safe. -->
+  <rect width="512" height="512" fill="#3367D6"/>
+  <ellipse cx="256" cy="256" rx="185" ry="64" transform="rotate(-24 256 256)" stroke="#ffffff" stroke-width="18" fill="none"/>
+  <circle cx="256" cy="256" r="98" fill="#ffffff" stroke="#3367D6" stroke-width="16"/>
+</svg>
